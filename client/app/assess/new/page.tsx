@@ -254,7 +254,8 @@ function Inner() {
                   <div className="hidden sm:flex w-20 h-28 rounded-md bg-white/5 ring-1 ring-white/10 overflow-hidden items-center justify-center flex-shrink-0">
                     <BookCover
                       src={book.thumbnail}
-                      alt=""
+                      alt={book.title}
+                      title={book.title}
                       className="w-full h-full object-cover"
                       loading="eager"
                     />

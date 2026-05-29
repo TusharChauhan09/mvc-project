@@ -471,7 +471,8 @@ function Inner() {
                       <div className="w-16 h-24 rounded-md bg-white/5 ring-1 ring-white/10 flex-shrink-0 overflow-hidden flex items-center justify-center">
                         <BookCover
                           src={b.thumbnail}
-                          alt=""
+                          alt={b.title}
+                          title={b.title}
                           className="w-full h-full object-cover"
                         />
                       </div>
@@ -505,7 +506,7 @@ function Inner() {
                           No assessments yet
                         </p>
                       )}
-                      {b.assessments_count != null && (
+                      {b.assessments_count != null && b.assessments_count > 0 && (
                         <p className="text-[11px] text-muted-foreground mt-2 text-center">
                           {b.assessments_count} assessment
                           {b.assessments_count === 1 ? "" : "s"}

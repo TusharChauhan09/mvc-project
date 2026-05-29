@@ -31,6 +31,44 @@ class SellerBookController extends Controller
         return response()->json(['data' => BookResource::collection($items)]);
     }
 
+    // GET /me/seller/sales — catalogue with per-book units sold + revenue.
+    public function sales(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user->isSeller()) {
+            abort(403, 'Only sellers can view sales.');
+        }
+
+        $books = Book::query()
+            ->where('added_by', $user->id)
+            ->withCount(['orders as units_sold' => fn($q) => $q->where('status', 'paid')])
+            ->withSum(['orders as revenue_paise' => fn($q) => $q->where('status', 'paid')], 'amount')
+            ->latest('id')
+            ->get();
+
+        $rows = $books->map(fn(Book $b) => [
+            'id' => $b->id,
+            'title' => $b->title,
+            'authors' => $b->authors,
+            'thumbnail' => (new BookResource($b))->resolve($request)['thumbnail'],
+            'status' => $b->status?->value ?? 'approved',
+            'price_paise' => (int) ($b->price_paise ?? 49900),
+            'units_sold' => (int) ($b->units_sold ?? 0),
+            'revenue_paise' => (int) ($b->revenue_paise ?? 0),
+        ]);
+
+        return response()->json([
+            'data' => $rows,
+            'totals' => [
+                'books' => $books->count(),
+                'on_sale' => $books->where('status', BookStatus::Approved->value)->count(),
+                'pending' => $books->where('status', BookStatus::Pending->value)->count(),
+                'units_sold' => (int) $rows->sum('units_sold'),
+                'revenue_paise' => (int) $rows->sum('revenue_paise'),
+            ],
+        ]);
+    }
+
     // POST /me/seller/books  (multipart with optional cover file)
     public function store(Request $request): JsonResponse
     {

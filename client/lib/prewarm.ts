@@ -7,6 +7,7 @@ import {
   Assessments,
   Books,
   Criteria,
+  Orders,
   PersonalLibrary,
   RoleRequests,
   SellerBooks,
@@ -48,6 +49,10 @@ export function prewarmDataForUser(role?: Role | null) {
 
   void Criteria.list()
     .then((r) => mutateCache("criteria:list", r))
+    .catch(() => {});
+
+  void Orders.mine()
+    .then((r) => mutateCache("profile:orders", r))
     .catch(() => {});
 
   void RoleRequests.mine()

@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\BookController;
 use App\Http\Controllers\Api\V1\CriterionController;
 use App\Http\Controllers\Api\V1\InstitutionController;
 use App\Http\Controllers\Api\V1\LibraryController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OAuthController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\ReadabilityController;
@@ -56,9 +57,16 @@ Route::prefix('v1')->group(function () {
         Route::get('me/role-requests', [RoleRequestController::class, 'mine']);
         Route::post('me/role-requests', [RoleRequestController::class, 'store']);
 
-        // Seller — list / submit own books.
+        // Seller — list / submit own books, view sales.
         Route::get('me/seller/books', [SellerBookController::class, 'index']);
+        Route::get('me/seller/sales', [SellerBookController::class, 'sales']);
         Route::post('me/seller/books', [SellerBookController::class, 'store']);
+
+        // Notifications — user inbox + admin broadcast.
+        Route::get('me/notifications', [NotificationController::class, 'index']);
+        Route::post('me/notifications/read-all', [NotificationController::class, 'markAllRead']);
+        Route::post('me/notifications/{notification}/read', [NotificationController::class, 'markRead']);
+        Route::post('admin/notifications', [NotificationController::class, 'broadcast']);
 
         // Orders (Razorpay).
         Route::post('orders', [OrderController::class, 'store']);
@@ -75,6 +83,7 @@ Route::prefix('v1')->group(function () {
         Route::delete('admin/books/{book}', [AdminBookController::class, 'destroy']);
 
         // Admin user CRUD.
+        Route::get('admin/stats', [AdminUserController::class, 'stats']);
         Route::get('admin/users', [AdminUserController::class, 'index']);
         Route::get('admin/sellers', [AdminUserController::class, 'sellers']);
         Route::get('admin/users/{user}', [AdminUserController::class, 'show']);

@@ -1,5 +1,6 @@
 import { api, API_BASE, getToken } from "./api";
 import type {
+  AdminStats,
   Assessment,
   Book,
   Criterion,
@@ -8,9 +9,11 @@ import type {
   Paginated,
   Role,
   RoleRequest,
+  SellerSales,
   ShippingAddress,
   User,
   UserBookEntry,
+  UserNotification,
 } from "./types";
 
 export const Books = {
@@ -106,8 +109,27 @@ export const RoleRequests = {
     }),
 };
 
+export const Notifications = {
+  list: () =>
+    api<{ data: UserNotification[]; unread_count: number }>(
+      "/me/notifications",
+    ),
+  markAll: () =>
+    api<{ message: string }>("/me/notifications/read-all", { method: "POST" }),
+  markOne: (id: number) =>
+    api<{ data: UserNotification }>(`/me/notifications/${id}/read`, {
+      method: "POST",
+    }),
+  broadcast: (input: { title: string; body?: string; type?: string }) =>
+    api<{ message: string; count: number }>("/admin/notifications", {
+      method: "POST",
+      json: input,
+    }),
+};
+
 export const SellerBooks = {
   mine: () => api<{ data: Book[] }>("/me/seller/books"),
+  sales: () => api<SellerSales>("/me/seller/sales"),
   /** Submit a new book with optional cover image via multipart upload. */
   create: async (input: {
     title: string;
@@ -178,7 +200,17 @@ export const AdminUsers = {
     const qs = sp.toString();
     return api<Paginated<User>>(`/admin/users${qs ? `?${qs}` : ""}`);
   },
-  sellers: () => api<Paginated<User & { seller_books_count?: number }>>("/admin/sellers"),
+  sellers: () =>
+    api<
+      Paginated<
+        User & {
+          seller_books_count?: number;
+          units_sold?: number;
+          revenue_paise?: number;
+        }
+      >
+    >("/admin/sellers"),
+  stats: () => api<{ data: AdminStats }>("/admin/stats"),
   show: (id: number) => api<{ data: User }>(`/admin/users/${id}`),
   update: (
     id: number,

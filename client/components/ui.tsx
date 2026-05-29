@@ -15,7 +15,7 @@ export function cx(...c: (string | false | null | undefined)[]) {
 
 /* ─────────── Button ─────────── */
 
-type BtnVariant = "primary" | "glass" | "ghost" | "outline" | "danger";
+type BtnVariant = "primary" | "glass" | "ghost" | "outline" | "danger" | "buy";
 type BtnSize = "sm" | "md" | "lg" | "icon";
 
 const btnBase =
@@ -32,6 +32,8 @@ const btnVariants: Record<BtnVariant, string> = {
     "text-muted-foreground hover:text-foreground hover:bg-white/5",
   danger:
     "bg-[hsl(var(--danger))] text-white hover:opacity-90 active:scale-[0.98]",
+  buy:
+    "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] hover:from-emerald-400 hover:to-teal-400 active:scale-[0.98]",
 };
 
 const btnSizes: Record<BtnSize, string> = {

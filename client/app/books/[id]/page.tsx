@@ -273,16 +273,28 @@ function Inner({ id }: { id: number }) {
         ← Library
       </Link>
 
-      <div className="grid lg:grid-cols-3 gap-8 animate-fade-rise-delay">
-        <aside className="lg:col-span-1 space-y-4">
+      <div className="grid lg:grid-cols-3 gap-8 items-start animate-fade-rise-delay">
+        <aside className="lg:col-span-1 space-y-4 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1 no-scrollbar">
           <div className="aspect-[2/3] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-white/[0.03] flex items-center justify-center shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
             <BookCover
               src={book.thumbnail}
               alt={book.title}
+              title={book.title}
               className="w-full h-full object-cover"
               loading="eager"
             />
           </div>
+
+          {(book.reader_link ||
+            book.preview_link ||
+            (book.source === "google_books" && book.external_id)) && (
+            <Link href={`/books/${book.id}/read`} className="block">
+              <Button className="w-full" size="lg">
+                <Icon.BookOpen />
+                Read mode
+              </Button>
+            </Link>
+          )}
 
           <Card className="p-5">
             <h3 className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-4">
@@ -398,8 +410,8 @@ function Inner({ id }: { id: number }) {
                 </p>
               </div>
               <Link href={`/buy/${book.id}`}>
-                <Button size="lg" variant="outline">
-                  <Icon.Sparkles />
+                <Button size="lg" variant="buy">
+                  <Icon.CartShop />
                   Buy now
                 </Button>
               </Link>

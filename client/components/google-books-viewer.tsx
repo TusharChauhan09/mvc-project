@@ -82,11 +82,13 @@ export function GoogleBooksViewer({
   volumeId,
   readerLink,
   title,
+  className,
 }: {
   volumeId: string | null;
   readerLink?: string | null;
   embeddable?: boolean;
   title: string;
+  className?: string;
 }) {
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "unavailable">(
@@ -151,7 +153,11 @@ export function GoogleBooksViewer({
   }, [volumeId]);
 
   return (
-    <div className="relative min-h-[420px] overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
+    <div
+      className={`relative overflow-hidden rounded-xl border border-white/10 bg-white/[0.03] ${
+        className ?? "min-h-[420px]"
+      }`}
+    >
       <div
         ref={viewerRef}
         className="absolute inset-0 bg-white"

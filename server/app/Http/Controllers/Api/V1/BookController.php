@@ -48,7 +48,7 @@ class BookController extends Controller
         $page = (int) $request->integer('page', 1);
         $perPage = (int) $request->integer('per_page', 15);
 
-        $cacheKey = 'books:index:v1:' . md5(json_encode([
+        $cacheKey = 'books:index:v2:' . md5(json_encode([
             'q' => $q,
             'type' => $type,
             'category' => $category,
@@ -59,6 +59,8 @@ class BookController extends Controller
         $books = Cache::remember($cacheKey, now()->addMinutes(15), function () use ($q, $type, $category, $perPage) {
             return Book::query()
                 ->where('status', 'approved')
+                ->withCount(['assessments as submitted_assessments_count' => fn($q) => $q->where('status', 'submitted')])
+                ->withAvg(['assessments as average_score' => fn($q) => $q->where('status', 'submitted')], 'overall_score')
                 ->search($q ?: null)
                 ->when($type !== '', fn($query) => $query->where('type', $type))
                 ->when($category !== '', fn($query) => $this->applyCategoryFilter($query, $category))
@@ -81,7 +83,8 @@ class BookController extends Controller
 
     public function show(Book $book): BookResource
     {
-        $book->loadCount('assessments');
+        $book->loadCount(['assessments as submitted_assessments_count' => fn($q) => $q->where('status', 'submitted')]);
+        $book->loadAvg(['assessments as average_score' => fn($q) => $q->where('status', 'submitted')], 'overall_score');
         return new BookResource($book);
     }
 

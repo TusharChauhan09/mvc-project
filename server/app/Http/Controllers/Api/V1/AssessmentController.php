@@ -19,6 +19,7 @@ class AssessmentController extends Controller
     {
         $user = $request->user();
         $items = Assessment::query()
+            ->with(['book', 'user'])
             ->when($request->filled('book_id'), fn($q) => $q->where('book_id', $request->integer('book_id')))
             ->when($request->filled('status'), fn($q) => $q->where('status', $request->string('status')))
             ->when(

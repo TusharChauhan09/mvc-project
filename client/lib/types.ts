@@ -168,6 +168,49 @@ export interface Order {
   updated_at: string;
 }
 
+export interface UserNotification {
+  id: number;
+  user_id: number;
+  title: string;
+  body: string | null;
+  type: string;
+  read_at: string | null;
+  created_by: number | null;
+  created_at: string;
+}
+
+export interface SellerSalesBook {
+  id: number;
+  title: string;
+  authors: string[] | null;
+  thumbnail: string | null;
+  status: BookStatus;
+  price_paise: number;
+  units_sold: number;
+  revenue_paise: number;
+}
+
+export interface SellerSales {
+  data: SellerSalesBook[];
+  totals: {
+    books: number;
+    on_sale: number;
+    pending: number;
+    units_sold: number;
+    revenue_paise: number;
+  };
+}
+
+export interface AdminStats {
+  users_total: number;
+  sellers_total: number;
+  books_total: number;
+  books_pending: number;
+  orders_total: number;
+  orders_paid: number;
+  revenue_paise: number;
+}
+
 export interface Paginated<T> {
   data: T[];
   meta?: {

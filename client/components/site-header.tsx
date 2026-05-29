@@ -6,6 +6,7 @@ import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Icon } from "./icons";
 import { Avatar, cx } from "./ui";
+import { NotificationBell } from "./notification-bell";
 
 const PUBLIC_LINKS = [
   { href: "/", label: "Home" },
@@ -23,7 +24,7 @@ const APP_LINKS: AppLink[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/books", label: "Library" },
   { href: "/assessments", label: "Reviews" },
-  { href: "/profile", label: "My shelf" },
+  { href: "/shelf", label: "My shelf" },
   { href: "/seller", label: "Seller", sellerOnly: true },
   { href: "/admin", label: "Admin", adminOnly: true },
   { href: "/criteria", label: "Rubric", adminOnly: true },
@@ -110,6 +111,7 @@ export function SiteHeader({ transparent = false }: { transparent?: boolean }) {
               <span className="hidden text-xs uppercase tracking-widest text-muted-foreground sm:inline">
                 {user.role}
               </span>
+              <NotificationBell />
               <Link
                 href="/profile"
                 className="liquid-glass flex items-center gap-2 rounded-full px-2 py-1.5 text-sm text-foreground transition-transform hover:scale-[1.03]"
@@ -131,7 +133,9 @@ export function SiteHeader({ transparent = false }: { transparent?: boolean }) {
           )}
         </div>
 
-        <details className="group md:hidden">
+        <div className="flex items-center gap-2 md:hidden">
+          {user && <NotificationBell />}
+          <details className="group">
           <summary
             className="liquid-glass flex h-10 w-10 flex-shrink-0 list-none items-center justify-center rounded-full text-foreground [&::-webkit-details-marker]:hidden"
             role="button"
@@ -209,7 +213,8 @@ export function SiteHeader({ transparent = false }: { transparent?: boolean }) {
               </div>
             </nav>
           </div>
-        </details>
+          </details>
+        </div>
       </div>
     </header>
   );

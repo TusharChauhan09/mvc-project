@@ -12,6 +12,7 @@ import {
   Skeleton,
   Avatar,
   Input,
+  Textarea,
   Select,
   cx,
 } from "@/components/ui";
@@ -22,6 +23,7 @@ import {
   AdminBooks,
   AdminOrders,
   AdminUsers,
+  Notifications,
   RoleRequests,
 } from "@/lib/endpoints";
 import { useCached, invalidateCache } from "@/lib/use-cached";
@@ -36,7 +38,24 @@ import type {
   User,
 } from "@/lib/types";
 
-type TabKey = "roles" | "books" | "users" | "sellers" | "allbooks" | "orders";
+type TabKey =
+  | "roles"
+  | "books"
+  | "users"
+  | "sellers"
+  | "allbooks"
+  | "orders"
+  | "notifications";
+
+const TAB_KEYS: TabKey[] = [
+  "roles",
+  "books",
+  "users",
+  "sellers",
+  "allbooks",
+  "orders",
+  "notifications",
+];
 
 export default function AdminPage() {
   return (
@@ -48,7 +67,15 @@ export default function AdminPage() {
 
 function Inner() {
   const { user } = useAuth();
-  const [tab, setTab] = useState<TabKey>("roles");
+  // Allow deep-linking from the dashboard via ?tab=… (read once at init; no
+  // effect needed, and window is only touched on the client).
+  const [tab, setTab] = useState<TabKey>(() => {
+    if (typeof window === "undefined") return "roles";
+    const param = new URLSearchParams(window.location.search).get("tab");
+    return param && (TAB_KEYS as string[]).includes(param)
+      ? (param as TabKey)
+      : "roles";
+  });
 
   if (!user) return null;
 
@@ -78,6 +105,7 @@ function Inner() {
     { value: "sellers", label: "Sellers" },
     { value: "allbooks", label: "All books" },
     { value: "orders", label: "Purchases" },
+    { value: "notifications", label: "Notify" },
   ];
 
   return (
@@ -125,6 +153,7 @@ function Inner() {
       {tab === "sellers" && <SellersTab />}
       {tab === "allbooks" && <AllBooksTab />}
       {tab === "orders" && <OrdersTab />}
+      {tab === "notifications" && <NotificationsTab />}
     </Container>
   );
 }
@@ -532,10 +561,15 @@ function UsersTab({ currentUserId }: { currentUserId: number }) {
 }
 
 function SellersTab() {
-  const q = useCached<Paginated<User & { seller_books_count?: number }>>(
-    "admin:sellers",
-    () => AdminUsers.sellers(),
-  );
+  const q = useCached<
+    Paginated<
+      User & {
+        seller_books_count?: number;
+        units_sold?: number;
+        revenue_paise?: number;
+      }
+    >
+  >("admin:sellers", () => AdminUsers.sellers());
   const items = q.data?.data ?? [];
 
   if (q.loading && items.length === 0) {
@@ -578,13 +612,118 @@ function SellersTab() {
               {u.name}
             </p>
             <p className="text-xs text-muted-foreground">{u.email}</p>
+            <Badge tone="outline" className="mt-2">
+              {u.seller_books_count ?? 0} book
+              {(u.seller_books_count ?? 0) === 1 ? "" : "s"}
+            </Badge>
           </div>
-          <Badge tone="outline">
-            {u.seller_books_count ?? 0} book{(u.seller_books_count ?? 0) === 1 ? "" : "s"}
-          </Badge>
+          <div className="text-right">
+            <p className="text-lg tabular-nums text-foreground">
+              {u.units_sold ?? 0}
+            </p>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              units sold
+            </p>
+          </div>
+          <div className="text-right w-28">
+            <p className="text-lg tabular-nums text-foreground">
+              ₹{Math.round((u.revenue_paise ?? 0) / 100).toLocaleString("en-IN")}
+            </p>
+            <p className="text-[11px] uppercase tracking-widest text-muted-foreground">
+              revenue
+            </p>
+          </div>
         </div>
       ))}
     </Card>
+  );
+}
+
+function NotificationsTab() {
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [lastCount, setLastCount] = useState<number | null>(null);
+
+  async function send(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setBusy(true);
+    try {
+      const res = await Notifications.broadcast({
+        title: title.trim(),
+        body: body.trim() || undefined,
+      });
+      toast({ title: res.message, tone: "success" });
+      setLastCount(res.count);
+      setTitle("");
+      setBody("");
+    } catch (err) {
+      toast({
+        title: "Failed to send",
+        description: err instanceof Error ? err.message : "",
+        tone: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,520px)_minmax(0,1fr)] animate-fade-rise-delay-2">
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Icon.Bell className="h-4 w-4 text-muted-foreground" />
+          <h2
+            className="text-2xl tracking-[-0.5px]"
+            style={{ fontFamily: "'Instrument Serif', serif" }}
+          >
+            Broadcast a notification
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">
+          Sent to every user. They&apos;ll see it in the bell menu instantly.
+        </p>
+        <form onSubmit={send} className="flex flex-col gap-4">
+          <Input
+            label="Title"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="New books just landed"
+          />
+          <Textarea
+            label="Message (optional)"
+            rows={5}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            placeholder="A short note for everyone…"
+          />
+          <Button type="submit" disabled={busy || !title.trim()}>
+            {busy ? "Sending…" : "Send to all users"}
+            <Icon.ArrowRight />
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="p-6 h-fit">
+        <h3 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          How it works
+        </h3>
+        <ul className="mt-3 space-y-2 text-sm text-muted-foreground leading-relaxed">
+          <li>• One copy is delivered to each user&apos;s inbox.</li>
+          <li>• Users open the bell in the header to read and clear them.</li>
+          <li>• Keep titles short; use the message for detail.</li>
+        </ul>
+        {lastCount !== null && (
+          <p className="mt-4 text-sm text-foreground">
+            Last broadcast reached{" "}
+            <span className="font-semibold tabular-nums">{lastCount}</span>{" "}
+            user(s).
+          </p>
+        )}
+      </Card>
+    </div>
   );
 }
 

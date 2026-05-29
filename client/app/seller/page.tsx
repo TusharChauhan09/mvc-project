@@ -121,7 +121,8 @@ function Inner() {
                   <div className="w-14 h-20 rounded-md bg-white/5 ring-1 ring-white/10 overflow-hidden flex items-center justify-center flex-shrink-0">
                     <BookCover
                       src={b.thumbnail}
-                      alt=""
+                      alt={b.title}
+                      title={b.title}
                       className="w-full h-full object-cover"
                     />
                   </div>

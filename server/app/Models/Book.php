@@ -69,6 +69,11 @@ class Book extends Model
         return $this->hasMany(UserBook::class);
     }
 
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
+
     public function scopeSearch(Builder $q, ?string $term): Builder
     {
         $term = $term === null ? null : trim($term);

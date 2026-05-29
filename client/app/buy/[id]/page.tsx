@@ -16,6 +16,7 @@ import { Icon } from "@/components/icons";
 import { BookCover } from "@/components/book-cover";
 import { RequireAuth } from "@/components/require-auth";
 import { Books, Orders } from "@/lib/endpoints";
+import { readCachedBook, cacheBook } from "@/lib/book-cache";
 import { toast } from "@/components/toaster";
 import { useAuth } from "@/lib/auth-context";
 import type { Book, ShippingAddress } from "@/lib/types";
@@ -76,8 +77,10 @@ export default function BuyPage({ params }: { params: Promise<{ id: string }> })
 function Inner({ id }: { id: number }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [book, setBook] = useState<Book | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Paint instantly from the cache the library/detail page already populated.
+  const cached = typeof window === "undefined" ? null : readCachedBook(id);
+  const [book, setBook] = useState<Book | null>(cached);
+  const [loading, setLoading] = useState(cached === null);
   const [busy, setBusy] = useState(false);
 
   const [shipping, setShipping] = useState<ShippingAddress>({
@@ -95,7 +98,10 @@ function Inner({ id }: { id: number }) {
     let active = true;
     Books.show(id)
       .then((r) => {
-        if (active) setBook(r.data);
+        if (active) {
+          setBook(r.data);
+          cacheBook(r.data);
+        }
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -104,6 +110,11 @@ function Inner({ id }: { id: number }) {
       active = false;
     };
   }, [id]);
+
+  // Warm the Razorpay checkout script on mount so clicking Pay opens instantly.
+  useEffect(() => {
+    void loadRazorpayScript();
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -140,7 +151,7 @@ function Inner({ id }: { id: number }) {
               razorpay_signature: resp.razorpay_signature,
             });
             toast({ title: "Payment successful", tone: "success" });
-            router.push("/profile?tab=orders");
+            router.push("/profile");
           } catch (err) {
             toast({
               title: "Verification failed",
@@ -197,73 +208,113 @@ function Inner({ id }: { id: number }) {
       />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="p-5 sm:p-6">
-          <form onSubmit={onSubmit} className="flex flex-col gap-4">
-            <Input
-              label="Full name"
-              required
-              value={shipping.name}
-              onChange={(e) => setShipping({ ...shipping, name: e.target.value })}
-              placeholder="Aryan Sharma"
-            />
-            <Input
-              label="Phone"
-              required
-              value={shipping.phone}
-              onChange={(e) => setShipping({ ...shipping, phone: e.target.value })}
-              placeholder="9876543210"
-            />
-            <Input
-              label="Address line 1"
-              required
-              value={shipping.line1}
-              onChange={(e) => setShipping({ ...shipping, line1: e.target.value })}
-              placeholder="House no., street"
-            />
-            <Input
-              label="Address line 2 (optional)"
-              value={shipping.line2 ?? ""}
-              onChange={(e) => setShipping({ ...shipping, line2: e.target.value })}
-              placeholder="Apartment, landmark"
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="City"
-                required
-                value={shipping.city}
-                onChange={(e) => setShipping({ ...shipping, city: e.target.value })}
-              />
-              <Input
-                label="State"
-                required
-                value={shipping.state}
-                onChange={(e) => setShipping({ ...shipping, state: e.target.value })}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Input
-                label="Postal code"
-                required
-                value={shipping.postal}
-                onChange={(e) => setShipping({ ...shipping, postal: e.target.value })}
-              />
-              <Input
-                label="Country"
-                value={shipping.country ?? "IN"}
-                onChange={(e) => setShipping({ ...shipping, country: e.target.value })}
-              />
-            </div>
+        <Card className="p-5 sm:p-7">
+          <form onSubmit={onSubmit} className="flex flex-col gap-6">
+            {/* Contact */}
+            <section className="flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/8 text-muted-foreground ring-1 ring-white/10">
+                  <Icon.User className="h-3.5 w-3.5" />
+                </span>
+                <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Contact
+                </h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Full name"
+                  required
+                  value={shipping.name}
+                  onChange={(e) => setShipping({ ...shipping, name: e.target.value })}
+                  placeholder="Aryan Sharma"
+                />
+                <Input
+                  label="Phone"
+                  required
+                  inputMode="tel"
+                  value={shipping.phone}
+                  onChange={(e) => setShipping({ ...shipping, phone: e.target.value })}
+                  placeholder="9876543210"
+                />
+              </div>
+            </section>
 
-            <Button type="submit" disabled={busy} className="mt-2">
-              {busy ? "Opening Razorpay…" : `Pay ${rupees(amount)}`}
+            {/* Address */}
+            <section className="flex flex-col gap-4 border-t border-white/5 pt-6">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/8 text-muted-foreground ring-1 ring-white/10">
+                  <Icon.Book className="h-3.5 w-3.5" />
+                </span>
+                <h2 className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  Shipping address
+                </h2>
+              </div>
+              <Input
+                label="Address line 1"
+                required
+                value={shipping.line1}
+                onChange={(e) => setShipping({ ...shipping, line1: e.target.value })}
+                placeholder="House no., street"
+              />
+              <Input
+                label="Address line 2 (optional)"
+                value={shipping.line2 ?? ""}
+                onChange={(e) => setShipping({ ...shipping, line2: e.target.value })}
+                placeholder="Apartment, landmark"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="City"
+                  required
+                  value={shipping.city}
+                  onChange={(e) => setShipping({ ...shipping, city: e.target.value })}
+                  placeholder="Mumbai"
+                />
+                <Input
+                  label="State"
+                  required
+                  value={shipping.state}
+                  onChange={(e) => setShipping({ ...shipping, state: e.target.value })}
+                  placeholder="Maharashtra"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Postal code"
+                  required
+                  inputMode="numeric"
+                  value={shipping.postal}
+                  onChange={(e) => setShipping({ ...shipping, postal: e.target.value })}
+                  placeholder="400001"
+                />
+                <Input
+                  label="Country"
+                  value={shipping.country ?? "IN"}
+                  onChange={(e) => setShipping({ ...shipping, country: e.target.value })}
+                />
+              </div>
+            </section>
+
+            <Button
+              type="submit"
+              variant="buy"
+              size="lg"
+              disabled={busy}
+              className="mt-1 w-full"
+            >
+              <Icon.Lock className="h-4 w-4" />
+              {busy ? "Opening Razorpay…" : `Pay ${rupees(amount)} securely`}
             </Button>
+            <p className="text-center text-[11px] text-muted-foreground">
+              You&apos;ll complete payment in the secure Razorpay window.
+            </p>
           </form>
         </Card>
 
         <Card className="p-5 h-fit lg:sticky lg:top-24">
           <div className="flex gap-4">
             <div className="w-20 h-28 rounded-md bg-white/5 ring-1 ring-white/10 overflow-hidden flex-shrink-0">
-              <BookCover src={book.thumbnail} alt="" className="w-full h-full object-cover" />
+              <BookCover src={book.thumbnail} alt={book.title} title={book.title} className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
               <Badge tone="success">In stock</Badge>

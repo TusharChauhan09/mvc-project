@@ -39,8 +39,8 @@ class BookResource extends JsonResource
             'source' => $this->source?->value,
             'external_id' => $this->external_id,
             'metadata' => $metadata,
-            'average_score' => $this->whenLoaded('assessments', fn() => $this->averageScore()),
-            'assessments_count' => $this->whenCounted('assessments'),
+            'average_score' => $this->average_score !== null ? round((float) $this->average_score, 2) : null,
+            'assessments_count' => $this->submitted_assessments_count !== null ? (int) $this->submitted_assessments_count : null,
             'created_at' => $this->created_at,
         ];
     }

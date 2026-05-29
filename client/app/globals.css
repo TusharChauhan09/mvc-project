@@ -232,3 +232,12 @@ button { cursor: pointer; }
   outline-offset: 2px;
   border-radius: 0.4rem;
 }
+
+/* hide scrollbar but keep scrolling (sticky panels) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
